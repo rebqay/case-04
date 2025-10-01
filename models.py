@@ -1,6 +1,8 @@
 from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, Field, EmailStr, validator
+from pydantic import BaseModel
+from typing import Optional
 
 class SurveySubmission(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
@@ -9,6 +11,14 @@ class SurveySubmission(BaseModel):
     consent: bool = Field(..., description="Must be true to accept")
     rating: int = Field(..., ge=1, le=5)
     comments: Optional[str] = Field(None, max_length=1000)
+    name: str
+    email: str
+    age: int
+    consent: bool
+    rating: int
+    comments: Optional[str] = None
+    user_agent: Optional[str] = None 
+    submission_id: Optional[str] = None
   
 
     @validator("comments")
