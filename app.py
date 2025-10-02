@@ -32,13 +32,16 @@ def submit_survey():
     try:
         submission = SurveySubmission(**payload)
     except ValidationError as ve:
-        return jsonify({
-            "error": "validation_error",
-            "detail": [
-                {"loc": err["loc"], "msg": str(err["msg"]), "type": err["type"]}
-                for err in ve.errors()
-            ]
-        }), 422
+    # Convert all non-serializable fields to strings
+        detail = []
+        for err in ve.errors():
+            detail.append({
+                "loc": err["loc"],
+                "msg": str(err["msg"]),  # <-- convert message to string
+                "type": err["type"]
+            })
+        return jsonify({"error": "validation_error", "detail": detail}), 422
+
 
     email_norm = submission.email.strip().lower()
     hashed_email = hash_sha256(email_norm)
