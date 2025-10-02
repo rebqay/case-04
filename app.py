@@ -6,11 +6,10 @@ from pydantic import BaseModel, Field, EmailStr, ValidationError
 from models import SurveySubmission, StoredSurveyRecord
 from storage import append_json_line
 
-
 app = Flask(__name__)
 CORS(app, resources={r"/v1/*": {"origins": "*"}})
 
-def hash_sha256(value:str) -> str:
+def hash_sha256(value: str) -> str:
     return hashlib.sha256(value.encode('utf-8')).hexdigest()
 
 @app.route("/ping", methods=["GET"])
@@ -22,8 +21,7 @@ def ping():
         "utc_time": datetime.now(timezone.utc).isoformat()
     })
 
-
-@app.post("/v1/survey")
+@app.route("/v1/survey", methods=["POST"])
 def submit_survey():
     payload = request.get_json(silent=True)
     if payload is None:
@@ -32,16 +30,8 @@ def submit_survey():
     try:
         submission = SurveySubmission(**payload)
     except ValidationError as ve:
-    # Convert all non-serializable fields to strings
-        detail = []
-        for err in ve.errors():
-            detail.append({
-                "loc": err["loc"],
-                "msg": str(err["msg"]),  # <-- convert message to string
-                "type": err["type"]
-            })
+        detail = [{"loc": err["loc"], "msg": str(err["msg"]), "type": err["type"]} for err in ve.errors()]
         return jsonify({"error": "validation_error", "detail": detail}), 422
-
 
     email_norm = submission.email.strip().lower()
     hashed_email = hash_sha256(email_norm)
@@ -54,7 +44,6 @@ def submit_survey():
         consent=submission.consent,
         rating=submission.rating,
         comments=submission.comments,
-        # source=submission.source,
         user_agent=submission.user_agent,
         hashed_email=hashed_email,
         hashed_age=hashed_age,
@@ -63,10 +52,9 @@ def submit_survey():
         ip=request.headers.get("X-Forwarded-For", request.remote_addr or "")
     )
 
-    append_json_line(record.model_dump())
+    append_json_line(record.dict())
 
     return jsonify({"status": "ok"}), 201
-
 
 if __name__ == "__main__":
     app.run(port=5000, debug=True)
