@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, Field, EmailStr, validator
+from pydantic import BaseModel, Field, EmailStr, field_validator
 
 class SurveySubmission(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
@@ -12,11 +12,11 @@ class SurveySubmission(BaseModel):
     user_agent: Optional[str] = None
     submission_id: Optional[str] = None
 
-    @validator("comments")
+    @field_validator("comments")
     def _strip_comments(cls, v):
         return v.strip() if isinstance(v, str) else v
 
-    @validator("consent")
+    @field_validator("consent")
     def _must_consent(cls, v):
         if v is not True:
             raise ValueError("consent must be true")

@@ -13,8 +13,6 @@ CORS(app, resources={r"/v1/*": {"origins": "*"}})
 def hash_sha256(value:str) -> str:
     return hashlib.sha256(value.encode('utf-8')).hexdigest()
 
-
-
 @app.route("/ping", methods=["GET"])
 def ping():
     """Simple health check endpoint."""
@@ -34,7 +32,13 @@ def submit_survey():
     try:
         submission = SurveySubmission(**payload)
     except ValidationError as ve:
-        return jsonify({"error": "validation_error", "detail": ve.errors()}), 422
+        return jsonify({
+            "error": "validation_error",
+            "detail": [
+                {"loc": err["loc"], "msg": str(err["msg"]), "type": err["type"]}
+                for err in ve.errors()
+            ]
+        }), 422
 
     email_norm = submission.email.strip().lower()
     hashed_email = hash_sha256(email_norm)
@@ -47,6 +51,7 @@ def submit_survey():
         consent=submission.consent,
         rating=submission.rating,
         comments=submission.comments,
+        # source=submission.source,
         user_agent=submission.user_agent,
         hashed_email=hashed_email,
         hashed_age=hashed_age,
@@ -54,8 +59,8 @@ def submit_survey():
         received_at=datetime.now(timezone.utc),
         ip=request.headers.get("X-Forwarded-For", request.remote_addr or "")
     )
-    
-    append_json_line(record.dict())
+
+    append_json_line(record.model_dump())
 
     return jsonify({"status": "ok"}), 201
 
